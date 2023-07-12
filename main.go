@@ -41,7 +41,7 @@ func GetStudents(w http.ResponseWriter, r *http.Request) {
 	id := params["id"]
 
 	for _, student := range class {
-		if student.ID == id && student.Teacher {
+		if student.ID == id && student.Teacher == true {
 			json.NewEncoder(w).Encode(student)
 			return
 		}
