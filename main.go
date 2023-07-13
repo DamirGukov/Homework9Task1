@@ -30,10 +30,41 @@ var class = []Class{
 func main() {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/student/{id}/{teacher}", GetStudents).Methods(http.MethodGet)
+	r.Handle("/student/{id}/{teacher}", auth(http.HandlerFunc(GetStudents)))
 
 	fmt.Println("Server is starting at port 8080")
 	http.ListenAndServe(":8080", r)
+}
+
+type User struct {
+	UserName     string
+	UserPassword string
+}
+
+var AdminUser1 = User{
+	UserName:     "ElenaGavlitskaya",
+	UserPassword: "admin1",
+}
+
+var AdminUser2 = User{
+	UserName:     "OlegSlushniy",
+	UserPassword: "admin2",
+}
+
+func auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if ok && (username == AdminUser2.UserName && password == AdminUser2.UserPassword || username == AdminUser1.UserName && password == AdminUser1.UserPassword) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+	})
 }
 
 func GetStudents(w http.ResponseWriter, r *http.Request) {
