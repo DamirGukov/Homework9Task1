@@ -59,11 +59,24 @@ func auth(next http.Handler) http.Handler {
 			return
 		}
 
-		if ok && (username == AdminUser2.UserName && password == AdminUser2.UserPassword || username == AdminUser1.UserName && password == AdminUser1.UserPassword) {
+		if ok && (username == AdminUser2.UserName && password == AdminUser2.UserPassword) {
+			// Oleg Slushniy
 			next.ServeHTTP(w, r)
 			return
 		}
 
+		if ok && (username == AdminUser1.UserName && password == AdminUser1.UserPassword) {
+			// Elena Gavlitskaya
+			params := mux.Vars(r)
+			teacher := params["teacher"]
+
+			if teacher == "Elena Gavlitskaya" {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		w.WriteHeader(http.StatusForbidden)
 	})
 }
 
@@ -81,3 +94,4 @@ func GetStudents(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	w.Header().Set("Content-Type", "application/json")
 }
+
