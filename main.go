@@ -60,13 +60,11 @@ func auth(next http.Handler) http.Handler {
 		}
 
 		if ok && (username == AdminUser2.UserName && password == AdminUser2.UserPassword) {
-			// Oleg Slushniy
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		if ok && (username == AdminUser1.UserName && password == AdminUser1.UserPassword) {
-			// Elena Gavlitskaya
 			params := mux.Vars(r)
 			teacher := params["teacher"]
 
