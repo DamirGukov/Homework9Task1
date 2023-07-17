@@ -27,15 +27,6 @@ var class = []Class{
 	{ID: "10", Student: "Sasha", Mark: 3.9, Teacher: "Oleg Slushniy"},
 }
 
-func main() {
-	r := mux.NewRouter()
-
-	r.Handle("/student/{id}/{teacher}", auth(http.HandlerFunc(GetStudents)))
-
-	fmt.Println("Server is starting at port 8080")
-	http.ListenAndServe(":8080", r)
-}
-
 type User struct {
 	UserName     string
 	UserPassword string
@@ -51,6 +42,15 @@ var AdminUser2 = User{
 	UserPassword: "admin2",
 }
 
+func main() {
+	r := mux.NewRouter()
+
+	r.Handle("/student/{id}", auth(http.HandlerFunc(GetStudents)))
+
+	fmt.Println("Server is starting at port 8080")
+	http.ListenAndServe(":8080", r)
+}
+
 func auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, ok := r.BasicAuth()
@@ -59,19 +59,10 @@ func auth(next http.Handler) http.Handler {
 			return
 		}
 
-		if ok && (username == AdminUser2.UserName && password == AdminUser2.UserPassword) {
+		if ok && ((username == AdminUser2.UserName && password == AdminUser2.UserPassword) ||
+			(username == AdminUser1.UserName && password == AdminUser1.UserPassword)) {
 			next.ServeHTTP(w, r)
 			return
-		}
-
-		if ok && (username == AdminUser1.UserName && password == AdminUser1.UserPassword) {
-			params := mux.Vars(r)
-			teacher := params["teacher"]
-
-			if teacher == "Elena Gavlitskaya" {
-				next.ServeHTTP(w, r)
-				return
-			}
 		}
 
 		w.WriteHeader(http.StatusForbidden)
@@ -81,7 +72,7 @@ func auth(next http.Handler) http.Handler {
 func GetStudents(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id := params["id"]
-	teacher := params["teacher"]
+	teacher := r.Header.Get("X-Auth-User")
 
 	for _, student := range class {
 		if student.ID == id && student.Teacher == teacher {
@@ -89,7 +80,7 @@ func GetStudents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
 	w.WriteHeader(http.StatusNotFound)
 	w.Header().Set("Content-Type", "application/json")
 }
-
