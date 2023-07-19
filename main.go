@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 )
 
@@ -33,19 +35,20 @@ type User struct {
 }
 
 var AdminUser1 = User{
-	UserName:     "ElenaGavlitskaya",
+	UserName:     "Elena",
 	UserPassword: "admin1",
 }
 
 var AdminUser2 = User{
-	UserName:     "OlegSlushniy",
+	UserName:     "Oleg",
 	UserPassword: "admin2",
 }
 
 func main() {
 	r := mux.NewRouter()
 
-	r.Handle("/student/{id}", auth(http.HandlerFunc(GetStudents)))
+	r.Handle("/student/{id}", auth(http.HandlerFunc(GetStudents))).
+		Methods(http.MethodGet)
 
 	fmt.Println("Server is starting at port 8080")
 	http.ListenAndServe(":8080", r)
@@ -59,9 +62,15 @@ func auth(next http.Handler) http.Handler {
 			return
 		}
 
-		if ok && ((username == AdminUser2.UserName && password == AdminUser2.UserPassword) ||
-			(username == AdminUser1.UserName && password == AdminUser1.UserPassword)) {
-			next.ServeHTTP(w, r)
+		if ok && (username == AdminUser2.UserName && password == AdminUser2.UserPassword) {
+			teacher := r.URL.Query().Get("teacher")
+			ctx := context.WithValue(r.Context(), "teacher", teacher)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		} else if ok && (username == AdminUser1.UserName && password == AdminUser1.UserPassword) {
+			teacher := r.URL.Query().Get("teacher")
+			ctx := context.WithValue(r.Context(), "teacher", teacher)
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
@@ -72,15 +81,26 @@ func auth(next http.Handler) http.Handler {
 func GetStudents(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	id := params["id"]
-	teacher := r.Header.Get("X-Auth-User")
+	teacher := r.Context().Value("teacher").(string)
 
 	for _, student := range class {
 		if student.ID == id && student.Teacher == teacher {
-			json.NewEncoder(w).Encode(student)
+			respondWithJSON(w, student)
 			return
 		}
 	}
 
 	w.WriteHeader(http.StatusNotFound)
 	w.Header().Set("Content-Type", "application/json")
+	respondWithJSON(w, nil)
 }
+
+func respondWithJSON(w http.ResponseWriter, body interface{}) {
+	err := json.NewEncoder(w).Encode(body)
+	if err != nil {
+		log.Printf("Something went wrong while writing response: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
