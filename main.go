@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type Class struct {
@@ -47,8 +48,7 @@ var AdminUser2 = User{
 func main() {
 	r := mux.NewRouter()
 
-	r.Handle("/student/{id}", auth(http.HandlerFunc(GetStudents))).
-		Methods(http.MethodGet)
+	r.Handle("/student/{id}", auth(http.HandlerFunc(GetStudents))).Methods(http.MethodGet)
 
 	fmt.Println("Server is starting at port 8080")
 	http.ListenAndServe(":8080", r)
@@ -62,19 +62,18 @@ func auth(next http.Handler) http.Handler {
 			return
 		}
 
-		if ok && (username == AdminUser2.UserName && password == AdminUser2.UserPassword) {
-			teacher := r.URL.Query().Get("teacher")
-			ctx := context.WithValue(r.Context(), "teacher", teacher)
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		} else if ok && (username == AdminUser1.UserName && password == AdminUser1.UserPassword) {
-			teacher := r.URL.Query().Get("teacher")
-			ctx := context.WithValue(r.Context(), "teacher", teacher)
-			next.ServeHTTP(w, r.WithContext(ctx))
+		var teacher string
+		if username == AdminUser2.UserName && password == AdminUser2.UserPassword {
+			teacher = "Oleg Slushniy"
+		} else if username == AdminUser1.UserName && password == AdminUser1.UserPassword {
+			teacher = "Elena Gavlitskaya"
+		} else {
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
-		w.WriteHeader(http.StatusForbidden)
+		ctx := context.WithValue(r.Context(), "teacher", teacher)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
